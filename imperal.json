@@ -14,7 +14,7 @@
   "tools": [
     {
       "name": "connect_paylocity",
-      "description": "Connect Paylocity account via credentials.",
+      "description": "Connect your own Paylocity account with API Token and Company ID.",
       "action_type": "write",
       "chain_callable": true,
       "effects": [
@@ -30,19 +30,25 @@
             "type": "string"
           },
           "api_token": {
-            "description": "Payroll API Token or OAuth Access Token.",
+            "description": "Paylocity Web Services API Bearer Token.",
             "title": "Api Token",
+            "type": "string"
+          },
+          "company_id": {
+            "description": "Paylocity Company ID (found in Paylocity Portal).",
+            "title": "Company Id",
             "type": "string"
           },
           "base_url": {
             "default": "",
-            "description": "Optional custom base URL or instance domain.",
+            "description": "Optional custom base URL (defaults to https://api.paylocity.com/api/v2).",
             "title": "Base Url",
             "type": "string"
           }
         },
         "required": [
-          "api_token"
+          "api_token",
+          "company_id"
         ],
         "title": "ConnectParams",
         "type": "object"

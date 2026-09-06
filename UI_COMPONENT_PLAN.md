@@ -1,3 +1,6 @@
-# Paylocity Connector - UI_COMPONENT_PLAN.md
+# Paylocity Connector — UI Component Plan
 
-Standard documentation for Paylocity Connector in Imperal Cloud.
+- **Sidebar (`paylocity_sidebar`):**
+  - Stretched vertical stack (`align="stretch"`).
+  - Inputs with descriptive labels and placeholders.
+  - Dedicated Help Modal explaining how to obtain Company ID and API Token.

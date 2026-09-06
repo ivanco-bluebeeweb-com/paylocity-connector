@@ -39,86 +39,104 @@ async def resolve_connection(ctx, connection_id: str = "") -> dict | None:
 
 @chat.function(
     "connect_paylocity",
-    "Connect Paylocity account via credentials.",
+    "Connect your own Paylocity account with API Token and Company ID.",
     action_type="write",
     chain_callable=True,
     event="paylocity-connector.connect_paylocity",
     effects=["create:connection"],
     data_model=ConnectParams
 )
-@chat.function(
-    "connect_paylocity",
-    "Connect Paylocity account via credentials.",
-    action_type="write",
-    chain_callable=True,
-    event="paylocity-connector.connect_paylocity",
-    effects=["create:connection"],
-    data_model=ConnectParams
-)
-async def connect_paylocity(params: ConnectParams, ctx) -> ActionResult[ConnectionRecord]:
-    """Handler for connect_paylocity."""
-    client = PaylocityClient(api_token=params.api_token, base_url=params.base_url)
-    await client.verify_auth()
-    conns = await _load_connections(ctx)
-    cid = f"conn_{uuid.uuid4().hex[:8]}"
-    record = {
+async def connect_paylocity(ctx, params: ConnectParams) -> ActionResult[ConnectionRecord]:
+    """Connect a new Paylocity company."""
+    client = PaylocityClient(
+        api_token=params.api_token,
+        company_id=params.company_id,
+        base_url=params.base_url
+    )
+    v_res = await client.verify_auth()
+    if v_res.get("status") == "error":
+        return ActionResult.error(
+            f"Authentication failed: {v_res.get('message', 'invalid credentials')}",
+            code=v_res.get("code", "UNAUTHORIZED")
+        )
+
+    cid = str(uuid.uuid4())
+    rec = {
         "id": cid,
-        "label": params.label or "Paylocity Account",
+        "label": params.label.strip() or f"Paylocity {params.company_id}",
+        "masked_key": _mask(params.api_token),
         "api_token": params.api_token,
+        "company_id": params.company_id,
         "base_url": params.base_url,
         "is_active": True
     }
-    for c in conns: c["is_active"] = False
-    conns.append(record)
+    conns = await _load_connections(ctx)
+    for c in conns:
+        c["is_active"] = False
+    conns.append(rec)
     await _save_connections(ctx, conns)
-    return ActionResult.ok(ConnectionRecord(id=cid, label=record["label"], masked_key=_mask(params.api_token), base_url=params.base_url, is_active=True))
+    return ActionResult.ok(ConnectionRecord(
+        id=rec["id"],
+        label=rec["label"],
+        masked_key=rec["masked_key"],
+        company_id=rec["company_id"],
+        base_url=rec["base_url"],
+        is_active=rec["is_active"]
+    ))
 
 @chat.function(
     "list_connections",
-    "List connected Paylocity accounts.",
+    "List connected Paylocity accounts without exposing sensitive tokens.",
     action_type="read",
     chain_callable=True,
-    data_model=ConnectionList
-)
-@chat.function(
-    "list_connections",
-    "List connected Paylocity accounts.",
-    action_type="read",
-    chain_callable=True,
+    event="paylocity-connector.list_connections",
     data_model=NoParams
 )
-async def list_connections(params: NoParams, ctx) -> ActionResult[ConnectionList]:
-    """Handler for list_connections."""
+async def list_connections(ctx, params: NoParams) -> ActionResult[ConnectionList]:
+    """List connections."""
     conns = await _load_connections(ctx)
-    records = [ConnectionRecord(id=c["id"], label=c["label"], masked_key=_mask(c.get("api_token", "")), base_url=c.get("base_url", ""), is_active=c.get("is_active", False)) for c in conns]
+    records = [
+        ConnectionRecord(
+            id=c["id"],
+            label=c.get("label", ""),
+            masked_key=c.get("masked_key", "***"),
+            company_id=c.get("company_id", ""),
+            base_url=c.get("base_url", ""),
+            is_active=c.get("is_active", False)
+        )
+        for c in conns
+    ]
     return ActionResult.ok(ConnectionList(connections=records, total=len(records)))
 
 @chat.function(
     "disconnect_paylocity",
-    "Disconnect Paylocity account.",
+    "Disconnect a Paylocity account.",
     action_type="write",
     chain_callable=True,
     event="paylocity-connector.disconnect_paylocity",
     effects=["delete:connection"],
     data_model=ConnectionIdParams
 )
-@chat.function(
-    "disconnect_paylocity",
-    "Disconnect Paylocity account.",
-    action_type="write",
-    chain_callable=True,
-    event="paylocity-connector.disconnect_paylocity",
-    effects=["delete:connection"],
-    data_model=ConnectionIdParams
-)
-async def disconnect_paylocity(params: ConnectionIdParams, ctx) -> ActionResult[DeleteResult]:
-    """Handler for disconnect_paylocity."""
+async def disconnect_paylocity(ctx, params: ConnectionIdParams) -> ActionResult[DeleteResult]:
+    """Disconnect an account."""
     conns = await _load_connections(ctx)
-    target = await resolve_connection(ctx, params.connection_id)
-    if not target:
+    target_id = params.connection_id
+    if not target_id:
+        active = await resolve_connection(ctx)
+        if not active:
+            return ActionResult.error("No active connection to disconnect", code="NOT_FOUND")
+        target_id = active["id"]
+
+    new_conns = [c for c in conns if c["id"] != target_id]
+    if len(new_conns) == len(conns):
         return ActionResult.error("Connection not found", code="NOT_FOUND")
-    new_conns = [c for c in conns if c["id"] != target["id"]]
-    if new_conns and target.get("is_active"):
+
+    if new_conns and not any(c.get("is_active") for c in new_conns):
         new_conns[0]["is_active"] = True
+
     await _save_connections(ctx, new_conns)
-    return ActionResult.ok(DeleteResult(id=target["id"], deleted=True, message="Disconnected successfully"))
+    return ActionResult.ok(DeleteResult(
+        id=target_id,
+        deleted=True,
+        message="Connection removed successfully"
+    ))

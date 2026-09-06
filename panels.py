@@ -14,11 +14,14 @@ def _settings_button() -> ui.UINode:
 
 def _help_modal() -> ui.UINode:
     return ui.Modal(
-        trigger=ui.Button("How do I set this up?", variant="ghost", size="sm"),
+        trigger=ui.Button("How do I connect Paylocity?", variant="ghost", size="sm"),
         title="Connecting Paylocity",
         children=[
             ui.Text(
-                "1. Sign in to your Paylocity account and navigate to API/Integration or OAuth settings.\n2. Choose your preferred authentication method (OAuth SSO, API Key / Personal Token, or Client Credentials / Service Account).\n3. Authorize or enter your credentials above and click Connect.",
+                "1. Sign in to your Paylocity portal at access.paylocity.com.\n"
+                "2. Your Company ID (e.g. 9-digit or alphanumeric) is visible in the top navigation or company setup.\n"
+                "3. In Web Services / API Access settings, request or generate an API Bearer Token.\n"
+                "4. Enter your API Token and Company ID above and click Connect Paylocity.",
                 variant="body"
             )
         ]
@@ -32,12 +35,39 @@ async def paylocity_sidebar(ctx, **kwargs) -> ui.UINode:
         align="stretch",
         children=[
             ui.Text("Paylocity", variant="heading"),
-            ui.Stack(
-                direction="v",
-                gap=1,
-                align="stretch",
+            ui.Text("Manage employees, payroll runs, departments, time-off and direct deposits via Paylocity Web Services API.", variant="caption"),
+            ui.Divider(),
+            ui.Form(
+                submit_label="Connect Paylocity",
+                action=ui.Call("connect_paylocity"),
                 children=[
-                    ui.Text("Manage your Paylocity connections and integrations.", variant="caption"),
+                    ui.Stack(
+                        direction="v",
+                        gap=2,
+                        align="stretch",
+                        children=[
+                            ui.Text("Connection Label", variant="caption"),
+                            ui.Input(
+                                param_name="label",
+                                placeholder="e.g. Acme Paylocity"
+                            ),
+                            ui.Text("API Bearer Token", variant="caption"),
+                            ui.Input(
+                                param_name="api_token",
+                                placeholder="Paste Paylocity Web Services API Token"
+                            ),
+                            ui.Text("Company ID", variant="caption"),
+                            ui.Input(
+                                param_name="company_id",
+                                placeholder="e.g. 12345"
+                            ),
+                            ui.Text("Custom Base URL (Optional)", variant="caption"),
+                            ui.Input(
+                                param_name="base_url",
+                                placeholder="https://api.paylocity.com/api/v2"
+                            )
+                        ]
+                    )
                 ]
             ),
             ui.Divider(),
@@ -46,66 +76,9 @@ async def paylocity_sidebar(ctx, **kwargs) -> ui.UINode:
                 gap=2,
                 align="stretch",
                 children=[
-                    ui.Button(
-                        "Sign in with Paylocity (OAuth / SSO)",
-                        variant="primary",
-                        size="sm",
-                        icon="login"
-                    ),
-                    ui.Divider(),
-                    ui.Text("Or connect via API Key or Service Account", variant="caption"),
-                    ui.Form(
-                        submit_label="Connect Paylocity",
-                        action=ui.Call("connect_paylocity"),
-                        children=[
-                            ui.Stack(
-                                direction="v",
-                                gap=2,
-                                align="stretch",
-                                children=[
-                                    ui.Stack(
-                                        direction="v",
-                                        gap=1,
-                                        align="stretch",
-                                        children=[
-                                            ui.Text("Authentication Method", variant="label"),
-                                            ui.Select(
-                                                param_name="auth_mode",
-                                                value="api_key",
-                                                options=[
-                                                    {"label": "API Key / Personal Access Token", "value": "api_key"},
-                                                    {"label": "OAuth 2.0 Bearer Token", "value": "oauth"},
-                                                    {"label": "Client Credentials (Service Account / Machine-to-Machine)", "value": "client_credentials"},
-                                                ]
-                                            ),
-                                        ]
-                                    ),
-                                    ui.Stack(
-                                        direction="v",
-                                        gap=1,
-                                        align="stretch",
-                                        children=[
-                                            ui.Text("Connection Label", variant="label"),
-                                            ui.Input(param_name="label", placeholder="e.g. Production Paylocity"),
-                                        ]
-                                    ),
-                                    ui.Stack(
-                                        direction="v",
-                                        gap=1,
-                                        align="stretch",
-                                        children=[
-                                            ui.Text("API Key / Access Token", variant="label"),
-                                            ui.Input(param_name="api_key", placeholder="Paste API Key, Bearer or Access Token"),
-                                        ]
-                                    ),
-                                ]
-                            )
-                        ]
-                    ),
+                    _help_modal(),
+                    _settings_button()
                 ]
-            ),
-            _help_modal(),
-            ui.Spacer(),
-            _settings_button(),
+            )
         ]
     )
