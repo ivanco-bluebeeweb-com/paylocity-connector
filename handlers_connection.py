@@ -75,14 +75,14 @@ async def connect_paylocity(ctx, params: ConnectParams) -> ActionResult[Connecti
         c["is_active"] = False
     conns.append(rec)
     await _save_connections(ctx, conns)
-    return ActionResult.ok(ConnectionRecord(
+    return ActionResult.success(ConnectionRecord(
         id=rec["id"],
         label=rec["label"],
         masked_key=rec["masked_key"],
         company_id=rec["company_id"],
         base_url=rec["base_url"],
         is_active=rec["is_active"]
-    ))
+    ), summary="Paylocity connected.")
 
 @chat.function(
     "list_connections",
@@ -106,7 +106,7 @@ async def list_connections(ctx, params: NoParams) -> ActionResult[ConnectionList
         )
         for c in conns
     ]
-    return ActionResult.ok(ConnectionList(connections=records, total=len(records)))
+    return ActionResult.success(ConnectionList(connections=records, total=len(records)), summary="Connections listed.")
 
 @chat.function(
     "disconnect_paylocity",
@@ -135,8 +135,8 @@ async def disconnect_paylocity(ctx, params: ConnectionIdParams) -> ActionResult[
         new_conns[0]["is_active"] = True
 
     await _save_connections(ctx, new_conns)
-    return ActionResult.ok(DeleteResult(
+    return ActionResult.success(DeleteResult(
         id=target_id,
         deleted=True,
         message="Connection removed successfully"
-    ))
+    ), summary="Paylocity disconnected.")
