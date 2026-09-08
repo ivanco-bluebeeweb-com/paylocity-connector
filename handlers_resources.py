@@ -11,7 +11,7 @@ async def _get_client(ctx, cid: str = ""):
     conn = await resolve_connection(ctx, cid)
     if not conn:
         return None, ActionResult.error("No active Paylocity connection", code="UNAUTHORIZED")
-    return PaylocityClient(api_token=conn["api_token"], base_url=conn.get("base_url", "")), None
+    return PaylocityClient(api_token=conn["api_token"], company_id=conn.get("company_id", ""), base_url=conn.get("base_url", "")), None
 
 @chat.function(
     "list_employees",

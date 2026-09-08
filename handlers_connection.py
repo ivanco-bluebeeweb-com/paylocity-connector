@@ -137,6 +137,5 @@ async def disconnect_paylocity(ctx, params: ConnectionIdParams) -> ActionResult[
     await _save_connections(ctx, new_conns)
     return ActionResult.success(DeleteResult(
         id=target_id,
-        deleted=True,
-        message="Connection removed successfully"
+        deleted=True, message="Connection removed successfully"
     ), summary="Paylocity disconnected.")
